@@ -76,7 +76,6 @@ def main():
     utime.sleep(1)
 
     output = Output()
-    output.reset()
 
     while True:
         output.draw(alerts.get(), clock.get())
@@ -164,21 +163,20 @@ class Output:
 
     def __init__(self):
         self._old_alert = ''
+        self._old_date_str = ''
         self._old_time_str = ''
 
         neopixel.enable()
         self._neopixels = False
 
-    def reset(self):
-        """Completely reset the screen to prevent ghosting."""
-        self._neopixels_off()
-        display.drawFill(BLACK)
-        display.flush()
-        display.drawFill(WHITE)
-        display.flush()
-
     def draw(self, alert, datetime):
-        """Draw either the alert if one is given, or the date & time."""
+        """Draw either the alert if one is given, or the date & time.
+
+        Clear the screen to prevent ghosting:
+            - When the date changes.
+            - When entering an alert.
+            - When leaving an alert.
+        """
         if alert:
             if alert == self._old_alert:
                 if self._neopixels:
@@ -189,6 +187,11 @@ class Output:
 
             self._old_alert = alert
             self._old_time_str = ''
+
+            # clear the screen to prevent ghosting.
+            display.drawFill(BLACK)
+            display.flush()
+
             display.drawFill(WHITE)
 
             width = display.width()
@@ -212,9 +215,18 @@ class Output:
         else:
             time_str = self._format_time(datetime)
             date_str = self._format_date(datetime)
+
             if time_str == self._old_time_str:
                 return
+
+            if self._old_alert or date_str != self._old_date_str:
+                # we've come out of an alert or the date changed,
+                # so clear the screen to prevent ghosting.
+                display.drawFill(BLACK)
+                display.flush()
+
             self._old_alert = ''
+            self._old_date_str = date_str
             self._old_time_str = time_str
             self._neopixels_off()
 
